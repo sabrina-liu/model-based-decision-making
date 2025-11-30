@@ -1,0 +1,27 @@
+{
+  "tau_values": [
+    0.05,
+    0.1,
+    0.15,
+    0.2,
+    0.25,
+    0.3
+  ],
+  "seed_fractions": [
+    0.0025,
+    0.005,
+    0.01,
+    0.02,
+    0.05
+  ],
+  "threshold_mode": "fixed",
+  "n_runs": 10,
+  "max_steps": 200,
+  "n_workers": 14,
+  "betweenness_k": 200,
+  "min_year": null,
+  "max_year": null,
+  "n_nodes": 133953,
+  "n_edges": 918605,
+  "density": 0.0001023899082501889
+}

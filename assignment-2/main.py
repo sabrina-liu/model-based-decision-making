@@ -25,7 +25,6 @@ Features
     - <prefix>_aggregate_all.csv   : aggregate statistics (mean, std) per (tau, seed fraction, strategy)
     - <prefix>_ts_all.csv          : mean adoption curves per (tau, seed fraction, strategy)
     - <prefix>_mean_curves_all.csv : mean adoption curves averaged over all (tau, seed fraction) per strategy
-    - (optional) <prefix>_adoption_times_representative.csv : node-level adoption times and degrees for one representative setting
 - Logs timings and progress
 
 Usage
@@ -39,7 +38,6 @@ python main.py \
   --n-workers 14 \
   --betweenness-k 200 \
   --output-prefix ass2 \
-  --save-representative-adoption-times
 
 
 """
@@ -618,86 +616,6 @@ def run_parallel_experiments_single_setting(
     return per_run_df, aggregate_df, ts_df, mean_curves_df
 
 
-# ----------------------------------------------------------------
-# Representative adoption times (degree vs adoption time analysis)
-# ----------------------------------------------------------------
-
-def compute_representative_adoption_times(
-    G: nx.Graph,
-    config: ThresholdExperimentConfig,
-    degree_ranking: List[Hashable],
-    betweenness_ranking: List[Hashable],
-    tau: float,
-    seed_fraction: float,
-    output_prefix: str,
-) -> None:
-    """
-    For a single (tau, seed_fraction), run one simulation per strategy with adoption-time tracking, and save node-level adoption times + degree
-
-    Output
-    ------
-    <output_prefix>_adoption_times_representative.csv
-        Columns: node, degree, strategy, adoption_time, tau, seed_fraction
-        
-    """
-    LOGGER.info(
-        "Computing representative adoption times for tau=%.3f, seed_fraction=%.3f",
-        tau, seed_fraction,
-    )
-
-    config_rep = replace(config, tau=tau, seed_fraction=seed_fraction)
-    thresholds = assign_thresholds(
-        G=G,
-        mode=config_rep.threshold_mode,
-        tau=config_rep.tau,
-        random_state=config_rep.base_random_seed,
-    )
-    deg_dict = dict(G.degree())
-
-    strategies = ["random", "degree", "betweenness"]
-    rows: List[Dict[str, object]] = []
-
-    for strategy in strategies:
-        rng = np.random.default_rng(config_rep.base_random_seed + hash(strategy) % 997)
-        n_nodes = G.number_of_nodes()
-        n_seeds = max(1, math.floor(config_rep.seed_fraction * n_nodes))
-
-        seeds = initialise_seeds(
-            G=G,
-            n_seeds=n_seeds,
-            strategy=strategy,
-            degree_ranking=degree_ranking,
-            betweenness_ranking=betweenness_ranking,
-            rng=rng,
-        )
-
-        _, _, adoption_times = run_threshold_diffusion(
-            G=G,
-            thresholds=thresholds,
-            seeds=seeds,
-            max_steps=config_rep.max_steps,
-            return_adoption_times=True,
-        )
-
-        assert adoption_times is not None
-        for node, t_adopt in adoption_times.items():
-            rows.append(
-                {
-                    "node": node,
-                    "degree": deg_dict.get(node, 0),
-                    "strategy": strategy,
-                    "adoption_time": t_adopt,
-                    "tau": tau,
-                    "seed_fraction": seed_fraction,
-                }
-            )
-
-    df = pd.DataFrame(rows)
-    out_path = f"{output_prefix}_adoption_times_representative.csv"
-    df.to_csv(out_path, index=False)
-    LOGGER.info("Saved representative adoption times to %s", out_path)
-
-
 # ----------
 # CLI + main
 # ----------
@@ -773,11 +691,7 @@ def parse_args() -> argparse.Namespace:
         default="ass2",
         help="Prefix for output CSVs (default: ass2)",
     )
-    parser.add_argument(
-        "--save-representative-adoption-times",
-        action="store_true",
-        help="If set, also save node-level adoption times for one setting",
-    )
+    
     return parser.parse_args()
 
 
@@ -887,20 +801,6 @@ def main() -> None:
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(config_info, f, indent=2)
     LOGGER.info("Saved configuration to: %s", json_path)
-
-    # 7. Optional representative node-level adoption times
-    if args.save_representative_adoption_times:
-        rep_tau = args.tau_values[0]
-        rep_sf = args.seed_fractions[0]
-        compute_representative_adoption_times(
-            G,
-            base_config,
-            degree_ranking,
-            betweenness_ranking,
-            tau=rep_tau,
-            seed_fraction=rep_sf,
-            output_prefix=args.output_prefix,
-        )
 
     LOGGER.info("All experiments completed successfully.")
 

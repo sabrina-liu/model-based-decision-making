@@ -178,12 +178,6 @@ Given an `output-prefix` (e.g. `ass2`), the script writes:
 * `ass2_config.json`
   Configuration and network summary (parameter lists, runs, steps, number of nodes/edges, density).
 
-* `ass2_adoption_times_representative.csv` *(optional)*
-  Node-level adoption times and degrees for each strategy for a single representative setting.
-  Columns: `node`, `degree`, `strategy`, `adoption_time`, `tau`, `seed_fraction`.
-
-These files provide everything needed to reconstruct the plots and tables used in the report.
-
 ---
 
 ## Repository Structure
@@ -198,7 +192,6 @@ Minimal structure for this assignment:
 ├── ass2_aggregate_all.csv
 ├── ass2_ts_all.csv
 ├── ass2_mean_curves_all.csv
-├── ass2_adoption_times_representative.csv  # Optional
 └── README.md                   # This file
 ```
 

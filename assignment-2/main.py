@@ -118,11 +118,7 @@ class ThresholdExperimentConfig:
 # Build co-authorship network
 # ---------------------------
 
-def build_coauthorship_graph(
-    csv_path: str,
-    min_year: int | None = None,
-    max_year: int | None = None,
-) -> nx.Graph:
+def build_coauthorship_graph(csv_path: str) -> nx.Graph:
     """
     Construct an undirected co-authorship network from `uva_dare_year_authors.csv`
 
@@ -141,8 +137,6 @@ def build_coauthorship_graph(
     ----------
     csv_path : str
         Path to `uva_dare_year_authors.csv`
-    min_year : int or None
-    max_year : int or None
 
     Returns
     -------
@@ -153,13 +147,6 @@ def build_coauthorship_graph(
     t0 = time.perf_counter()
     LOGGER.info("Reading UvA DARE csv from %s", csv_path)
     df = pd.read_csv(csv_path)
-
-    if min_year is not None:
-        df = df[df["year"] >= min_year]
-        LOGGER.info("Filtered to publications with year >= %s", min_year)
-    if max_year is not None:
-        df = df[df["year"] <= max_year]
-        LOGGER.info("Filtered to publications with year <= %s", max_year)
 
     LOGGER.info("Building co-authorship graph from %d publications", len(df))
     G = nx.Graph()
@@ -191,17 +178,17 @@ def build_coauthorship_graph(
     )
 
     if not nx.is_connected(G):
-        LOGGER.info("Graph disconnected; extracting largest connected component")
+        LOGGER.info("Extracting LCC")
         largest_cc_nodes = max(nx.connected_components(G), key=len)
         G = G.subgraph(largest_cc_nodes).copy()
 
     LOGGER.info(
-        "LCC: %d nodes, %d edges, density = %.5f.",
+        "LCC: %d nodes, %d edges, density = %.5f",
         G.number_of_nodes(),
         G.number_of_edges(),
         nx.density(G),
     )
-    LOGGER.info("Graph building + LCC extraction took %.2f seconds.",
+    LOGGER.info("Graph building + LLC extraction took %.2f seconds",
                 time.perf_counter() - t0)
     
     return G
@@ -316,7 +303,7 @@ def initialise_seeds(
         seeds = degree_ranking[:n_seeds]
     elif strategy == "betweenness":
         if betweenness_ranking is None:
-            raise ValueError("Betweenness ranking must be provided for 'betweenness'")
+            raise ValueError("Betweenness ranking must be provided for 'betweeness'")
         seeds = betweenness_ranking[:n_seeds]
     else:
         raise ValueError(f"Unknown seeding strategy: {strategy}")
@@ -351,7 +338,7 @@ def run_threshold_diffusion(
     -------
     adoption_history : list of float
     n_steps_realised : int
-    adoption_times   : dict or None
+    adoption_times   : dict of None
 
     """
     active_set = set(seeds)
@@ -779,18 +766,6 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=200,
         help="Sample size k for approximate betweenness (default: 200)",
-    )
-    parser.add_argument(
-        "--min-year",
-        type=int,
-        default=None,
-        help="Optional minimum publication year to include",
-    )
-    parser.add_argument(
-        "--max-year",
-        type=int,
-        default=None,
-        help="Optional maximum publication year to include",
     )
     parser.add_argument(
         "--output-prefix",
